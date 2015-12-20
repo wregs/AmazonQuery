@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title</title>
+    @Styles.Render("~/Content/css")
+    @Scripts.Render("~/bundles/modernizr")
+    @Scripts.Render("~/bundles/jquery")
+
+
+</head>
+<body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">                
+                @Html.ActionLink("AmazonQuery", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
+                
+            </div>
+            <div >
+                <ul class="nav navbar-nav" >
+                    <li><div style="width:200px;">&nbsp;</div></li>
+                    <li><form method="post" id="form0">
+                    
+                        @Html.TextBox("Query", null, new { @style = "border:1px solid;margin-left:15px;margin-top:12px;" })
+                        <input style="border:1px solid;" type="submit" value="search" />
+                    </form></li>
+                   
+                    <li>@Html.DropDownList("currencyList",null,new { @style= "border:1px solid;margin-left:15px; margin-top:14px;",@id="currencySel"})</li>
+                </ul>
+                
+            </div>
+        </div>
+        
+    </div>
+    <div class="container body-content">
+        @RenderBody()
+        <hr />
+        <footer>
+            <p>&copy; @DateTime.Now.Year</p>
+        </footer>
+    </div>
+
+    
+    @Scripts.Render("~/bundles/bootstrap")
+   
+    @RenderSection("scripts", required: false)
+    @Scripts.Render("~/Scripts/index.js");
+    <script type="text/javascript">
+        // function call upon keyword submition
+        // call to server is asynchronous
+        // function retrieves currency rate
+        // call is synchronous
+        $('#form0').submit(function (event) {
+            var textbox = this.children[0];
+            var submit_but = this.children[1];
+            var currency_sel = document.getElementById("currencySel");
+            var e = document.getElementById("currencySel");
+            var selected_cur = e.options[e.selectedIndex].text;
+            textbox.disabled = true;
+            submit_but.disabled = true;
+            currency_sel.disabled = true;
+            $('#initmsg').hide();
+            $('#search_result').hide();
+            $('#ajaxLoader').show();
+            $.ajax({
+                dataType:'json',
+                url: '@Url.Action("Search","Home")',
+                type: 'POST',
+                data: "Query= " + textbox.value ,
+                success: function (result) {
+                   rate=$.ajax({
+                        data: "to_cur=" + currency_sel.value,
+                        type: 'POST',
+                        url: '/Home/GetRate',
+                        async: false
+                   }).responseText;
+                   currency = selected_cur;
+                   post_request(result);
+                },
+                error: function () { $('#initmsg').show();}
+
+            }).always(function () {
+                textbox.disabled = false;
+                submit_but.disabled = false;
+                currency_sel.disabled = false;
+                $('#ajaxLoader').hide();
+            });
+            event.preventDefault();
+        });
+        // function called upon currency selector being changed by user
+        // call is asynchronous
+        // on success apply new currency rate to all pages of data
+        $('#currencySel').change(function () {
+            var currency_sel = document.getElementById("currencySel");
+            currency_sel.disabled = true;
+            var e = document.getElementById("currencySel");
+            var selected_cur = e.options[e.selectedIndex].text;
+
+            $.ajax({
+                url: '@Url.Action("GetRate","Home")',
+                type: 'POST',
+                data: "to_cur=" + currency_sel.value,
+                success: function (result) {
+                    
+                    currency = selected_cur;
+                    rate = result;
+                    apply_cur_rateAll();
+                }
+                }).always(function(){
+                    currency_sel.disabled = false;
+                });
+        });
+    </script>
+</body>
+</html>
